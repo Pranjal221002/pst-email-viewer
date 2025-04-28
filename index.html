@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Email Explorer</title>
+    <style>
+        body {
+            background-color: #0f1117;
+            color: #e0e0e0;
+            font-family: sans-serif;
+            padding: 2rem;
+        }
+        input, select, textarea, button {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: 1px solid #444;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            width: 100%;
+        }
+        .email-card {
+            background-color: #1e212b;
+            padding: 1.2rem;
+            border-radius: 12px;
+            margin-bottom: 1.2rem;
+            border-left: 6px solid #4e8cff;
+        }
+        .email-subject {
+            font-weight: bold;
+            font-size: 18px;
+            color: #4e8cff;
+        }
+        .email-meta {
+            font-size: 14px;
+            color: #c0c0c0;
+            margin-bottom: 0.8rem;
+        }
+        .email-body {
+            font-size: 15px;
+            color: #e0e0e0;
+            white-space: pre-wrap;
+        }
+        .download-link {
+            display: inline-block;
+            margin-top: 0.5rem;
+            color: #8cc1ff;
+        }
+        .form-section {
+            margin-bottom: 2rem;
+        }
+        h1 {
+            margin-bottom: 1.5rem;
+        }
+        small {
+            display: block;
+            margin-top: -0.8rem;
+            margin-bottom: 1rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h1>📂 PST Email Viewer</h1>
+
+    {% if pst_filename %}
+        <p>✅ <strong>Stored File:</strong></p>
+    {% endif %}
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        <!-- Optional PST File Upload (if enabled) -->
+        {# <input type="file" name="pst_file"> #}
+
+        <div class="form-section">
+            <label>📁 Manually Enter PST File Path</label>
+            <input type="text" name="pst_path" placeholder="e.g. C:\Users\You\Documents\emails.pst" value="{{ pst_path }}">
+        </div>
+
+        <div class="form-section">
+            <label>📂 Select Embedded PST File</label>
+            <select name="embedded_path">
+                <option value="">-- Choose Embedded File --</option>
+                {% for file in embedded_files %}
+                    <option value="{{ file.path }}" {% if file.path == pst_path %}selected{% endif %}>
+                        {{ file.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-section">
+            <label>🔍 Search Keyword</label>
+            <input type="text" name="query" placeholder="e.g. invoice or ~project deadline" value="{{ query }}">
+            <small>Use <strong>~</strong> before query for semantic search</small>
+            <button type="submit" name="search">🔍 Search Emails</button>
+        </div>
+    </form>
+
+    {% if emails %}
+        <h2>🔎 Found {{ emails|length }} email(s)</h2>
+        {% for email in emails %}
+            <div class="email-card">
+                <div class="email-subject">{{ email.subject or "(No Subject)" }}</div>
+                <div class="email-meta">
+                    <strong>From:</strong> {{ email.sender or "Unknown" }}<br>
+                    <strong>To:</strong> {{ email.to or "N/A" }}<br>
+                    <strong>CC:</strong> {{ email.cc or "" }}<br>
+                    <strong>Sent:</strong> {{ email.sent_time or "Unknown" }}
+                </div>
+                <div class="email-body">{{ email.body[:3000]|e }}</div>
+
+                {% if email.attachments %}
+                    <h4>📎 Attachments ({{ email.attachments|length }})</h4>
+                    <ul>
+                    {% for att in email.attachments %}
+                        <li>
+                            {{ att.name }} ({{ (att.size // 1024) }} KB, {{ att.type.split('/')[-1]|upper if att.type else "UNKNOWN" }}) -
+                            <a class="download-link" href="{{ url_for('download_attachment', token=att.token) }}">⬇ Download</a>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p><em>No attachments.</em></p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% endif %}
+</body>
+</html> 
